@@ -49,9 +49,9 @@ export class ChartService {
       axisAlignment: EAxisAlignment.Bottom,
       axisTitle: "Time (s)",
       autoRange: EAutoRange.Never,
-      labelProvider: new NumericLabelProvider({
+      labelProvider: {
         formatLabel: (dataValue: number) => `${(dataValue / 1000).toFixed(1)}`
-      })
+      }
     });
 
     const yAxis = new NumericAxis(wasmContext, {
