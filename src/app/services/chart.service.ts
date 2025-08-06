@@ -3,6 +3,7 @@ import { Signal } from '../models/signal.model';
 import {
   SciChartSurface,
   NumericAxis,
+  NumericLabelProvider,
   FastLineRenderableSeries,
   XyDataSeries,
   EAxisAlignment,
@@ -17,7 +18,6 @@ import {
   CursorModifier,
   ELegendOrientation,
   ELegendPlacement,
-  parseColorToUIntArgb,
 } from 'scichart';
 
 @Injectable({
@@ -53,9 +53,9 @@ export class ChartService {
       axisAlignment: EAxisAlignment.Bottom,
       axisTitle: "Time (s)",
       autoRange: EAutoRange.Never,
-      labelProvider: {
+      labelProvider: new NumericLabelProvider({
         formatLabel: (dataValue: number) => `${(dataValue / 1000).toFixed(1)}`
-      }
+      })
     });
 
     const yAxis = new NumericAxis(wasmContext, {
@@ -89,27 +89,28 @@ export class ChartService {
   setupSeries(signals: Signal[]) {
     if (!this.sciChartSurface) return;
 
+    const surface = this.sciChartSurface;
     this.activeSignals = signals;
     this.dataSeries = [];
     this.renderableSeries = [];
 
     signals.forEach((signal, index) => {
       // Create data series
-      const dataSeries = new XyDataSeries(this.sciChartSurface!.webAssemblyContext2D, {
+      const dataSeries = new XyDataSeries(surface.webAssemblyContext2D, {
         dataSeriesName: signal.name,
       });
 
       // Create renderable series
-      const renderableSeries = new FastLineRenderableSeries(this.sciChartSurface!.webAssemblyContext2D, {
+      const renderableSeries = new FastLineRenderableSeries(surface.webAssemblyContext2D, {
         dataSeries,
-        stroke: parseColorToUIntArgb(signal.color),
+        stroke: signal.color,
         strokeThickness: 2,
         isVisible: signal.visible,
       });
 
       this.dataSeries.push(dataSeries);
       this.renderableSeries.push(renderableSeries);
-      this.sciChartSurface.renderableSeries.add(renderableSeries);
+      surface.renderableSeries.add(renderableSeries);
 
       // Store reference in signal for visibility control
       signal.series = renderableSeries;
@@ -194,11 +195,12 @@ export class ChartService {
   updateView(xZoomLevel: number, yZoomLevel: number, xPosition: number, yPosition: number) {
     if (!this.sciChartSurface) return;
 
+    const surface = this.sciChartSurface;
     // Set manual control mode when sliders are used
     this.isManualControl = true;
 
-    const xAxis = this.sciChartSurface.xAxes.get(0);
-    const yAxis = this.sciChartSurface.yAxes.get(0);
+    const xAxis = surface.xAxes.get(0);
+    const yAxis = surface.yAxes.get(0);
 
     const xTotalRange = this.t - this.dataStartTime;
     const yTotalRange = this.maxY - this.minY;
@@ -224,11 +226,12 @@ export class ChartService {
   resetView() {
     if (!this.sciChartSurface) return;
 
+    const surface = this.sciChartSurface;
     // Reset manual control mode
     this.isManualControl = false;
 
-    const xAxis = this.sciChartSurface.xAxes.get(0);
-    const yAxis = this.sciChartSurface.yAxes.get(0);
+    const xAxis = surface.xAxes.get(0);
+    const yAxis = surface.yAxes.get(0);
     
     xAxis.visibleRange = new NumberRange(this.dataStartTime, this.t);
     
