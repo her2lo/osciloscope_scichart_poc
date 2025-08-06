@@ -1,147 +1,159 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  lightningChart,
-  AxisTickStrategies,
-  UIElementBuilders,
-  UILayoutBuilders,
-  Themes,
-  AutoCursorModes,
-} from '@arction/lcjs';
+  SciChartSurface,
+  NumericAxis,
+  FastLineRenderableSeries,
+  XyDataSeries,
+  EAxisAlignment,
+  EAutoRange,
+  NumberRange,
+  SciChartJsNavyTheme,
+  MouseWheelZoomModifier,
+  ZoomPanModifier,
+  ZoomExtentsModifier,
+  RubberBandXyZoomModifier,
+  LegendModifier,
+  CursorModifier,
+  ELegendOrientation,
+  ELegendPlacement,
+  parseColorToUIntArgb,
+} from 'scichart';
 
 function App() {
   const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstance = useRef<any>(null);
+  const sciChartSurface = useRef<SciChartSurface | null>(null);
   const frameHandle = useRef<any>(null);
   const t = useRef<number>(0);
+  const dataSeries = useRef<XyDataSeries[]>([]);
 
   useEffect(() => {
-    if (!chartRef.current) return;
+    const initChart = async () => {
+      if (!chartRef.current) return;
 
-    // Create chart factory instance
-    const lc = lightningChart({
-      license:
-        '0002-n0gRRhsqA7RCjiZjMcbIwm4oK9HNKwBJEX8PMwa7VpcjbOl+EMeHvAOkp3oe5wUnLWLJNONsll1wx5ZKVGzziCdj-MEUCIQDuqELKD0F3Vh5dfDl/5JhcU44NtcvKTaoYAHTTImx7NgIgUZc+nLicIkkJG6y+IfGRtUgJqL49MEFqHfSJfhbb7uk=',
-      licenseInformation: {
-        appTitle: 'LightningChart JS Trial',
-        company: 'LightningChart Ltd.',
-      },
-    });
-
-    // Create chart
-    const chart = lc
-      .ChartXY({
-        container: chartRef.current,
-        theme: Themes.lightNew,
-      })
-      .setTitle('')
-      .setPadding({ right: 50 })
-      .setZoomingMode('xy'); // Use string literal instead of enum
-
-    chartInstance.current = chart;
-
-    const axisX = chart
-      .getDefaultAxisX()
-      .setScrollStrategy(undefined)
-      .setTitle('X axis spacing')
-      .setTickStrategy(AxisTickStrategies.Numeric, (tickStrategy) =>
-        tickStrategy.setTitleFormatter((v) => `${(v / 1000).toFixed(1)} s`)
+      // Set license key (replace with your actual license)
+      SciChartSurface.setRuntimeLicenseKey(
+        "YOUR_SCICHART_LICENSE_KEY_HERE"
       );
 
-    const axisY = chart
-      .getDefaultAxisY()
-      .setTitle('Y axis spacing')
-      .setTickStrategy(AxisTickStrategies.Numeric);
+      try {
+        // Create the SciChartSurface
+        const { sciChartSurface: surface, wasmContext } = await SciChartSurface.create(chartRef.current, {
+          theme: new SciChartJsNavyTheme(),
+        });
 
-    const series1 = chart
-      .addLineSeries()
-      .setName('Pressure actual value [bar]')
-      .setStrokeStyle((s) => s.setPattern(2, 2).setThickness(2));
+        sciChartSurface.current = surface;
 
-    const series2 = chart
-      .addLineSeries()
-      .setName('Pressure set value [bar]')
-      .setStrokeStyle((s) => s.setThickness(3).setColor('#e53935'));
+        // Create X and Y axes
+        const xAxis = new NumericAxis(wasmContext, {
+          axisAlignment: EAxisAlignment.Bottom,
+          axisTitle: "Time (s)",
+          autoRange: EAutoRange.Always,
+          labelProvider: {
+            formatLabel: (dataValue: number) => `${(dataValue / 1000).toFixed(1)}`
+          }
+        });
 
-    const series3 = chart
-      .addLineSeries()
-      .setName('Temperature motor oil [°C]')
-      .setStrokeStyle((s) => s.setThickness(3).setColor('#03A9F4'));
+        const yAxis = new NumericAxis(wasmContext, {
+          axisAlignment: EAxisAlignment.Left,
+          axisTitle: "Values",
+          autoRange: EAutoRange.Always,
+        });
 
-    // Add legend
-    chart
-      .addUIElement(UIElementBuilders.LegendBox)
-      .setPosition({ x: 0, y: 0 })
-      .setOrigin({ x: 0, y: 0 })
-      .add(chart);
+        surface.xAxes.add(xAxis);
+        surface.yAxes.add(yAxis);
 
-    // Add control buttons
-    const layout = chart
-      .addUIElement(UILayoutBuilders.Row)
-      .setPosition({ x: 50, y: 100 })
-      .setOrigin({ x: 0, y: 0 });
+        // Add chart modifiers for interactivity
+        surface.chartModifiers.add(
+          new MouseWheelZoomModifier(),
+          new ZoomPanModifier(),
+          new ZoomExtentsModifier(),
+          new RubberBandXyZoomModifier(),
+          new LegendModifier({
+            orientation: ELegendOrientation.Horizontal,
+            placement: ELegendPlacement.TopLeft,
+            showCheckboxes: true,
+            showSeriesMarkers: true,
+          }),
+          new CursorModifier()
+        );
 
-    layout
-      .addElement(UIElementBuilders.TextBox)
-      .setText('X axis spacing')
-      .setMargin(5);
+        // Create data series for each signal
+        const series1Data = new XyDataSeries(wasmContext, {
+          dataSeriesName: "Pressure actual value [bar]",
+        });
 
-    layout
-      .addElement(UIElementBuilders.Button)
-      .setText('SMALLER')
-      .onMouseClick(() => {
-        const interval = axisX.getInterval();
-        const center = (interval.start + interval.end) / 2;
-        const range = (interval.end - interval.start) * 0.5;
-        axisX.setInterval(center - range / 2, center + range / 2);
-      });
+        const series2Data = new XyDataSeries(wasmContext, {
+          dataSeriesName: "Pressure set value [bar]",
+        });
 
-    layout
-      .addElement(UIElementBuilders.Button)
-      .setText('BIGGER')
-      .onMouseClick(() => {
-        const interval = axisX.getInterval();
-        const center = (interval.start + interval.end) / 2;
-        const range = (interval.end - interval.start) * 2;
-        axisX.setInterval(center - range / 2, center + range / 2);
-      });
+        const series3Data = new XyDataSeries(wasmContext, {
+          dataSeriesName: "Temperature motor oil [°C]",
+        });
 
-    // Add crosshair cursor
-    const cursor = chart.setCursorResultTableBuilder(
-      UIElementBuilders.CursorResultTable
-    );
-    chart.setAutoCursor(AutoCursorModes.onHover);
+        dataSeries.current = [series1Data, series2Data, series3Data];
 
-    // Setup data streaming
-    const pointsPerSecond = 200000;
-    const chunkSize = 1000;
-    const interval = 1000 / (pointsPerSecond / chunkSize);
+        // Create renderable series
+        const series1 = new FastLineRenderableSeries(wasmContext, {
+          dataSeries: series1Data,
+          stroke: parseColorToUIntArgb("#1a237e"),
+          strokeThickness: 2,
+        });
 
-    const pushData = () => {
-      const data1 = [];
-      const data2 = [];
-      const data3 = [];
+        const series2 = new FastLineRenderableSeries(wasmContext, {
+          dataSeries: series2Data,
+          stroke: parseColorToUIntArgb("#e53935"),
+          strokeThickness: 3,
+        });
 
-      for (let i = 0; i < chunkSize; i++) {
-        const x = t.current;
-        data1.push({ x, y: 60 + Math.sin(x * 2) * 10 });
-        data2.push({ x, y: 100 + Math.sin(x) * 50 });
-        data3.push({ x, y: 80 + Math.cos(x * 1.5) * 30 });
-        t.current += 1 / pointsPerSecond;
+        const series3 = new FastLineRenderableSeries(wasmContext, {
+          dataSeries: series3Data,
+          stroke: parseColorToUIntArgb("#03A9F4"),
+          strokeThickness: 3,
+        });
+
+        surface.renderableSeries.add(series1, series2, series3);
+
+        // Setup data streaming
+        const pointsPerSecond = 200000;
+        const chunkSize = 1000;
+        const interval = 1000 / (pointsPerSecond / chunkSize);
+
+        const pushData = () => {
+          const xValues: number[] = [];
+          const y1Values: number[] = [];
+          const y2Values: number[] = [];
+          const y3Values: number[] = [];
+
+          for (let i = 0; i < chunkSize; i++) {
+            const x = t.current;
+            xValues.push(x);
+            y1Values.push(60 + Math.sin(x * 2) * 10);
+            y2Values.push(100 + Math.sin(x) * 50);
+            y3Values.push(80 + Math.cos(x * 1.5) * 30);
+            t.current += 1 / pointsPerSecond;
+          }
+
+          // Append data to series
+          dataSeries.current[0].appendRange(xValues, y1Values);
+          dataSeries.current[1].appendRange(xValues, y2Values);
+          dataSeries.current[2].appendRange(xValues, y3Values);
+
+          frameHandle.current = setTimeout(pushData, interval);
+        };
+
+        pushData();
+
+      } catch (error) {
+        console.error('Error initializing SciChart:', error);
       }
-
-      series1.add(data1);
-      series2.add(data2);
-      series3.add(data3);
-
-      frameHandle.current = setTimeout(pushData, interval);
     };
 
-    pushData();
+    initChart();
 
     // Handle window resize
     const handleResize = () => {
-      if (chartInstance.current) {
-        chartInstance.current.engine.resize();
+      if (sciChartSurface.current) {
+        sciChartSurface.current.resizeAndDraw();
       }
     };
 
@@ -151,8 +163,8 @@ function App() {
     return () => {
       if (frameHandle.current) clearTimeout(frameHandle.current);
       window.removeEventListener('resize', handleResize);
-      if (chartInstance.current) {
-        chartInstance.current.dispose();
+      if (sciChartSurface.current) {
+        sciChartSurface.current.delete();
       }
     };
   }, []);

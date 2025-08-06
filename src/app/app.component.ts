@@ -51,7 +51,7 @@ export class AppComponent implements OnInit, OnDestroy {
   toggleSignal(signal: Signal) {
     signal.visible = !signal.visible;
     if (signal.series) {
-      signal.series.setVisible(signal.visible);
+      signal.series.isVisible = signal.visible;
     }
   }
 
