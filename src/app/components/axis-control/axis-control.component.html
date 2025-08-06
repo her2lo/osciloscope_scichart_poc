@@ -1,0 +1,17 @@
+<div [ngStyle]="vertical ? verticalStyle : {}" [class]="containerClass">
+  <h3 class="text-sm font-semibold" [class.mb-2]="!vertical">{{ title }}</h3>
+  <div [class.flex]="vertical" [class.items-center]="vertical" [class.gap-2]="vertical">
+    <input
+      type="range"
+      [min]="min"
+      [max]="max"
+      [ngModel]="value"
+      (ngModelChange)="onValueChange($event)"
+      (input)="handleInput($event)"
+      [class.vertical]="vertical"
+    />
+    <div class="text-xs text-gray-500" [class.mt-1]="!vertical">
+      {{ value }}{{ unit }}
+    </div>
+  </div>
+</div>

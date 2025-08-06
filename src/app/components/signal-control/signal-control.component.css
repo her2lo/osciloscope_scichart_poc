@@ -1,0 +1,11 @@
+.rounded-full {
+  border-radius: 9999px;
+}
+
+button {
+  transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+  opacity: 0.9;
+}
