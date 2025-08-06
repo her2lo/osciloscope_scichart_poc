@@ -36,11 +36,7 @@ export class ChartService {
   private activeSignals: Signal[] = [];
 
   async initChart(container: HTMLDivElement) {
-    // Initialize SciChart with license (trial license)
-    SciChartSurface.setRuntimeLicenseKey(
-      "YOUR_SCICHART_LICENSE_KEY_HERE" // Replace with actual license key
-    );
-
+    // SciChart.js Community Edition - no license key required
     // Create the SciChartSurface
     const { sciChartSurface, wasmContext } = await SciChartSurface.create(container, {
       theme: new SciChartJsNavyTheme(),

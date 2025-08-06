@@ -21,7 +21,6 @@ const chart = lc.ChartXY({ container, theme: Themes.light });
 
 **After (SciChart):**
 ```typescript
-SciChartSurface.setRuntimeLicenseKey("LICENSE_KEY");
 const { sciChartSurface, wasmContext } = await SciChartSurface.create(container, {
   theme: new SciChartJsNavyTheme()
 });
@@ -122,15 +121,19 @@ The `ChartService` has been completely rewritten to use SciChart APIs:
 - **Axis Control**: Maintained same interface, updated backend implementation
 - **App Component**: Minimal changes to maintain existing functionality
 
-## License Configuration
+## License Information
 
-### Development/Trial
+### Community Edition (Current)
+SciChart.js Community Edition works out of the box without any license key configuration. It includes:
+- Full functionality with watermark
+- 6-month version timeout
+- Suitable for non-commercial use and commercial evaluation (30-60 days)
+
+### Commercial License
+For commercial applications, purchase licenses from SciChart and configure:
 ```typescript
-SciChartSurface.setRuntimeLicenseKey("TRIAL_LICENSE_KEY");
+SciChartSurface.setRuntimeLicenseKey("COMMERCIAL_LICENSE_KEY");
 ```
-
-### Production
-Replace with commercial license key obtained from SciChart.
 
 ## Testing Considerations
 

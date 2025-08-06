@@ -67,7 +67,6 @@ src/
 ### Prerequisites
 - Node.js 18+
 - npm or yarn
-- SciChart license key (trial available)
 
 ### Installation
 
@@ -77,11 +76,7 @@ src/
    npm install
    ```
 
-3. Configure SciChart license:
-   - Replace `YOUR_SCICHART_LICENSE_KEY_HERE` in the chart service with your actual license key
-   - For trial: Visit [SciChart website](https://www.scichart.com/) to get a trial license
-
-4. Start the development server:
+3. Start the development server:
    ```bash
    npm start
    ```
@@ -89,13 +84,14 @@ src/
 ## Configuration
 
 ### SciChart License
-Update the license key in:
-- `src/app/services/chart.service.ts` (Angular)
-- `src/App.tsx` (React)
+This project uses **SciChart.js Community Edition** which requires no license key and works out of the box with a watermark. 
 
-```typescript
-SciChartSurface.setRuntimeLicenseKey("YOUR_LICENSE_KEY_HERE");
-```
+**Community License Terms:**
+- ✅ Non-commercial applications, academic use, personal projects
+- ✅ Commercial evaluation (30-60 days)
+- ❌ Commercial application development requires a paid license
+
+For commercial use, purchase licenses at [scichart.com](https://www.scichart.com/)
 
 ### Performance Settings
 The application is configured for high-performance streaming:

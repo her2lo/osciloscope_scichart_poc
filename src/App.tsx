@@ -31,10 +31,6 @@ function App() {
       if (!chartRef.current) return;
 
       // Set license key (replace with your actual license)
-      SciChartSurface.setRuntimeLicenseKey(
-        "YOUR_SCICHART_LICENSE_KEY_HERE"
-      );
-
       try {
         // Create the SciChartSurface
         const { sciChartSurface: surface, wasmContext } = await SciChartSurface.create(chartRef.current, {
