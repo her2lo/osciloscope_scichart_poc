@@ -20,6 +20,13 @@ import {
   ELegendPlacement,
 } from 'scichart';
 
+// ✅ Eigener LabelProvider für Sekundenformat auf X-Achse
+class CustomTimeLabelProvider extends NumericLabelProvider {
+  override formatLabel(dataValue: number): string {
+    return (dataValue / 1000).toFixed(1); // z. B. „1.2“ statt „1200“
+  }
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -35,35 +42,30 @@ export class ChartService {
   private renderableSeries: FastLineRenderableSeries[] = [];
   private activeSignals: Signal[] = [];
 
-  async initChart(container: HTMLDivElement) {
-    // SciChart.js Community Edition - no license key required
-    // Create the SciChartSurface
+  // ✅ Initialisiert das Chart
+  async initChart(container: HTMLDivElement): Promise<SciChartSurface> {
     const { sciChartSurface, wasmContext } = await SciChartSurface.create(container, {
       theme: new SciChartJsNavyTheme(),
     });
 
     this.sciChartSurface = sciChartSurface;
 
-    // Create X and Y axes
     const xAxis = new NumericAxis(wasmContext, {
       axisAlignment: EAxisAlignment.Bottom,
       axisTitle: "Time (s)",
       autoRange: EAutoRange.Never,
-      labelProvider: {
-        formatLabel: (dataValue: number) => `${(dataValue / 1000).toFixed(1)}`
-      }
+      labelProvider: new CustomTimeLabelProvider()
     });
 
     const yAxis = new NumericAxis(wasmContext, {
       axisAlignment: EAxisAlignment.Left,
       axisTitle: "Values",
-      autoRange: EAutoRange.Never,
+      autoRange: EAutoRange.Never
     });
 
     sciChartSurface.xAxes.add(xAxis);
     sciChartSurface.yAxes.add(yAxis);
 
-    // Add chart modifiers for interactivity
     sciChartSurface.chartModifiers.add(
       new MouseWheelZoomModifier(),
       new ZoomPanModifier(),
@@ -82,7 +84,8 @@ export class ChartService {
     return sciChartSurface;
   }
 
-  setupSeries(signals: Signal[]) {
+  // ✅ Setzt neue Signale und fügt Renderables hinzu
+  setupSeries(signals: Signal[]): void {
     if (!this.sciChartSurface) return;
 
     const surface = this.sciChartSurface;
@@ -91,12 +94,10 @@ export class ChartService {
     this.renderableSeries = [];
 
     signals.forEach((signal, index) => {
-      // Create data series
       const dataSeries = new XyDataSeries(surface.webAssemblyContext2D, {
         dataSeriesName: signal.name,
       });
 
-      // Create renderable series
       const renderableSeries = new FastLineRenderableSeries(surface.webAssemblyContext2D, {
         dataSeries,
         stroke: signal.color,
@@ -108,39 +109,32 @@ export class ChartService {
       this.renderableSeries.push(renderableSeries);
       surface.renderableSeries.add(renderableSeries);
 
-      // Store reference in signal for visibility control
       signal.series = renderableSeries;
     });
   }
 
-  clearData() {
+  // ✅ Löscht Daten und startet Streaming neu
+  clearData(): void {
     if (!this.sciChartSurface) return;
-    
-    // Stop current streaming
+
     if (this.frameHandle) {
       window.clearTimeout(this.frameHandle);
     }
 
-    // Clear all data series
-    this.dataSeries.forEach(dataSeries => {
-      dataSeries.clear();
-    });
+    this.dataSeries.forEach(ds => ds.clear());
 
-    // Reset time and data tracking
     this.t = 0;
     this.dataStartTime = 0;
     this.minY = Infinity;
     this.maxY = -Infinity;
     this.isManualControl = false;
 
-    // Reset axes
     this.resetView();
-
-    // Restart streaming with active signals
     this.startStreaming(this.activeSignals, () => {});
   }
 
-  startStreaming(signals: Signal[], onUpdate: () => void) {
+  // ✅ Startet das Datenstreaming (z. B. für Simulation)
+  startStreaming(signals: Signal[], onUpdate: () => void): void {
     if (!this.sciChartSurface || signals.length === 0) return;
 
     const pointsPerSecond = 200;
@@ -166,18 +160,16 @@ export class ChartService {
         if (signals[0]) yValues[0].push(y1);
         if (signals[1]) yValues[1].push(y2);
         if (signals[2]) yValues[2].push(y3);
-        
+
         this.t += 1 / pointsPerSecond;
       }
 
-      // Append data to series
       signals.forEach((signal, index) => {
         if (this.dataSeries[index] && yValues[index].length > 0) {
           this.dataSeries[index].appendRange(xValues, yValues[index]);
         }
       });
 
-      // Only auto-fit if not in manual control mode
       if (!this.isManualControl) {
         this.resetView();
       }
@@ -188,15 +180,14 @@ export class ChartService {
     pushData();
   }
 
-  updateView(xZoomLevel: number, yZoomLevel: number, xPosition: number, yPosition: number) {
+  // ✅ Setzt die Ansicht manuell (z. B. via UI-Slider)
+  updateView(xZoomLevel: number, yZoomLevel: number, xPosition: number, yPosition: number): void {
     if (!this.sciChartSurface) return;
 
-    const surface = this.sciChartSurface;
-    // Set manual control mode when sliders are used
     this.isManualControl = true;
 
-    const xAxis = surface.xAxes.get(0);
-    const yAxis = surface.yAxes.get(0);
+    const xAxis = this.sciChartSurface.xAxes.get(0);
+    const yAxis = this.sciChartSurface.yAxes.get(0);
 
     const xTotalRange = this.t - this.dataStartTime;
     const yTotalRange = this.maxY - this.minY;
@@ -204,9 +195,8 @@ export class ChartService {
     const xRange = xTotalRange * (100 / xZoomLevel);
     const yRange = yTotalRange * (100 / yZoomLevel);
 
-    // Calculate center points based on position
-    const xCenter = this.dataStartTime + (xTotalRange * (xPosition / 100));
-    const yCenter = this.minY + (yTotalRange * (yPosition / 100));
+    const xCenter = this.dataStartTime + xTotalRange * (xPosition / 100);
+    const yCenter = this.minY + yTotalRange * (yPosition / 100);
 
     xAxis.visibleRange = new NumberRange(
       xCenter - xRange / 2,
@@ -219,26 +209,26 @@ export class ChartService {
     );
   }
 
-  resetView() {
+  // ✅ Setzt Achsenbereiche automatisch basierend auf Y-Min/Max
+  resetView(): void {
     if (!this.sciChartSurface) return;
 
-    const surface = this.sciChartSurface;
-    // Reset manual control mode
     this.isManualControl = false;
 
-    const xAxis = surface.xAxes.get(0);
-    const yAxis = surface.yAxes.get(0);
-    
+    const xAxis = this.sciChartSurface.xAxes.get(0);
+    const yAxis = this.sciChartSurface.yAxes.get(0);
+
     xAxis.visibleRange = new NumberRange(this.dataStartTime, this.t);
-    
+
     const yPadding = (this.maxY - this.minY) * 0.1;
     yAxis.visibleRange = new NumberRange(
-      this.minY - yPadding, 
+      this.minY - yPadding,
       this.maxY + yPadding
     );
   }
 
-  cleanup() {
+  // ✅ Räumt Chart auf
+  cleanup(): void {
     if (this.frameHandle) {
       window.clearTimeout(this.frameHandle);
     }
